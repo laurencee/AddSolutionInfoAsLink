@@ -97,9 +97,7 @@
     </COMReference>
   </ItemGroup>
   <ItemGroup>
-    <Content Include="..\..\..\Users\Beast\My Documents\Visual Studio 2012\Addins\AddSolutionInfoAsLink - For Testing.AddIn">
-      <Link>AddSolutionInfoAsLink - For Testing.AddIn</Link>
-    </Content>
+    <Content Include="AddSolutionInfoAsLink - For Testing.AddIn" />
     <Content Include="AddSolutionInfoAsLink.AddIn" />
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSHARP.Targets" />
