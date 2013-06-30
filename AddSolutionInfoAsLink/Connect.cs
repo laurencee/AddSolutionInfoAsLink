@@ -15,7 +15,7 @@ namespace AddSolutionInfoAsLink
         private DTE2 _applicationObject;
         private AddIn _addInInstance;
 
-        public ProjectItem SolutionInfo
+        private ProjectItem SolutionInfo
         {
             get { return _applicationObject.Solution.FindProjectItem("SolutionInfo.cs") ?? _applicationObject.Solution.FindProjectItem("GlobalAssemblyInfo.cs"); }
         }
@@ -54,7 +54,7 @@ namespace AddSolutionInfoAsLink
                         Bitmap: 2308);
 
                     //Add a control for the command to the tools menu:
-                    if((command != null) && (toolsPopup != null))
+                    if ((command != null) && (toolsPopup != null))
                     {
                         command.AddControl(toolsPopup.CommandBar);
                     }
@@ -88,7 +88,7 @@ namespace AddSolutionInfoAsLink
                     status = vsCommandStatus.vsCommandStatusSupported;
             }
             else
-                status = vsCommandStatus.vsCommandStatusUnsupported;
+                status = vsCommandStatus.vsCommandStatusUnsupported | vsCommandStatus.vsCommandStatusInvisible;
         }
 
         /// <summary>Implements the Exec method of the IDTCommandTarget interface. This is called when the command is invoked.</summary>
