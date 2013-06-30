@@ -15,6 +15,11 @@ namespace AddSolutionInfoAsLink
         private DTE2 _applicationObject;
         private AddIn _addInInstance;
 
+        public ProjectItem SolutionInfo
+        {
+            get { return _applicationObject.Solution.FindProjectItem("SolutionInfo.cs") ?? _applicationObject.Solution.FindProjectItem("GlobalAssemblyInfo.cs"); }
+        }
+
         /// <summary>Implements the OnConnection method of the IDTExtensibility2 interface. Receives notification that the Add-in is being loaded.</summary>
         /// <param term='application'>Root object of the host application.</param>
         /// <param term='connectMode'>Describes how the Add-in is being loaded.</param>
@@ -71,15 +76,19 @@ namespace AddSolutionInfoAsLink
         /// <seealso class='Exec' />
         public void QueryStatus(string commandName, vsCommandStatusTextWanted neededText, ref vsCommandStatus status, ref object commandText)
         {
-            if (neededText == vsCommandStatusTextWanted.vsCommandStatusTextWantedNone)
+            if (neededText != vsCommandStatusTextWanted.vsCommandStatusTextWantedNone || commandName != "AddSolutionInfoAsLink.Connect.AddSolutionInfoAsLink") 
+                return;
+
+            // Only show the button when a solution that has projects is opened
+            if (_applicationObject.Solution.IsOpen && _applicationObject.Solution.Projects.Count > 0 && SolutionInfo != null)
             {
-                // Only show the button when a solution that has projects is opened
-                if (commandName == "AddSolutionInfoAsLink.Connect.AddSolutionInfoAsLink" && _applicationObject.Solution.IsOpen && _applicationObject.Solution.Projects.Count > 0)
-                {
-                    status = (vsCommandStatus)vsCommandStatus.vsCommandStatusSupported | vsCommandStatus.vsCommandStatusEnabled;
-                    return;
-                }
+                if (GetValidProjects().Any())
+                    status = vsCommandStatus.vsCommandStatusSupported | vsCommandStatus.vsCommandStatusEnabled;
+                else
+                    status = vsCommandStatus.vsCommandStatusSupported;
             }
+            else
+                status = vsCommandStatus.vsCommandStatusUnsupported;
         }
 
         /// <summary>Implements the Exec method of the IDTCommandTarget interface. This is called when the command is invoked.</summary>
@@ -95,33 +104,29 @@ namespace AddSolutionInfoAsLink
             if (executeOption != vsCommandExecOption.vsCommandExecOptionDoDefault || commandName != "AddSolutionInfoAsLink.Connect.AddSolutionInfoAsLink")
                 return;
 
-            if (_applicationObject.Solution.IsOpen && _applicationObject.Solution.Projects.Count > 0)
+            if (_applicationObject.Solution.IsOpen && _applicationObject.Solution.Projects.Count > 0 && SolutionInfo != null)
             {
-                // Set the solution info file from common name conventions
-                ProjectItem solutionInfo = _applicationObject.Solution.FindProjectItem("SolutionInfo.cs") ?? _applicationObject.Solution.FindProjectItem("GlobalAssemblyInfo.cs");
+                var validProjects = GetValidProjects();
 
-                if (solutionInfo != null)
+                foreach (var validProject in validProjects)
                 {
-                    // Filter out test projects and unloaded projects
-                    IEnumerable<Project> validProjects = _applicationObject.Solution.Projects.Cast<Project>()
-                        .Where(x => x.ConfigurationManager != null &&
-                                    x.Name.IndexOf("test", StringComparison.OrdinalIgnoreCase) < 0);
-
-
-                    foreach (var validProject in validProjects)
-                    {
-                        // Don't try to add to projects that already have the solution info file added
-                        if (validProject.ProjectItems.Cast<ProjectItem>().All(x => x.Name != solutionInfo.Name))
-                        {
-                            // Add solution info as a link to the project
-                            validProject.ProjectItems.AddFromFile(solutionInfo.FileNames[1]);
-                        }
-                    }
+                    // Add solution info as a link to the project
+                    validProject.ProjectItems.AddFromFile(SolutionInfo.FileNames[1]);
                 }
             }
 
             handled = true;
-            return;
+        }
+
+        private IEnumerable<Project> GetValidProjects()
+        {
+            if (SolutionInfo == null)
+                return Enumerable.Empty<Project>();
+
+            return _applicationObject.Solution.Projects.Cast<Project>()
+                .Where(x => x.ConfigurationManager != null &&
+                            x.Name.IndexOf("test", StringComparison.OrdinalIgnoreCase) < 0)
+                .Where(y => y.ProjectItems.Cast<ProjectItem>().All(z => z.Name != SolutionInfo.Name));
         }
 
         #region unimplemented interface methods
